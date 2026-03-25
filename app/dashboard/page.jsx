@@ -81,4 +81,167 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {activeTab === 'ov
+      {activeTab === 'overview' && (
+        <>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+            {[
+              { label: 'Total Impressions', value: totals.impressions.toLocaleString(), color: '#6366f1' },
+              { label: 'Comments', value: totals.comments.toLocaleString(), color: '#10b981' },
+              { label: 'EYbi Signups', value: totals.signups.toLocaleString(), color: '#f59e0b' },
+              { label: 'Revenue', value: `£${totals.revenue.toLocaleString()}`, color: '#ec4899' },
+            ].map(k => (
+              <div key={k.label} style={kpiBox}>
+                <div style={{ fontSize: 26, fontWeight: 800, color: k.color }}>{k.value}</div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{k.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={card}>
+            <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#e5e7eb' }}>Campaign Gates</h3>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#9ca3af', marginBottom: 6 }}>
+                <span>Week 4 Gate — 100 EYbi Signups (Unlock Paid Ads)</span>
+                <span style={{ color: '#f59e0b' }}>{totals.signups} / 100</span>
+              </div>
+              <div style={{ background: '#2d3148', borderRadius: 6, height: 10 }}>
+                <div style={{ width: `${signupGate}%`, background: '#f59e0b', height: 10, borderRadius: 6, transition: 'width 0.4s' }} />
+              </div>
+            </div>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#9ca3af', marginBottom: 6 }}>
+                <span>Week 8 Gate — £90,000 Revenue (30-Day Payback)</span>
+                <span style={{ color: '#ec4899' }}>£{totals.revenue.toLocaleString()} / £90,000</span>
+              </div>
+              <div style={{ background: '#2d3148', borderRadius: 6, height: 10 }}>
+                <div style={{ width: `${revenueGate}%`, background: '#ec4899', height: 10, borderRadius: 6, transition: 'width 0.4s' }} />
+              </div>
+            </div>
+          </div>
+
+          <div style={card}>
+            <h3 style={{ margin: '0 0 14px', fontSize: 15, color: '#e5e7eb' }}>Hook Structure A/B Test</h3>
+            <div style={{ display: 'flex', gap: 12 }}>
+              {[
+                { label: 'Story-First', count: storyFirst.length, avg: avgEngagement(storyFirst), color: '#6366f1' },
+                { label: 'Stat-First', count: statFirst.length, avg: avgEngagement(statFirst), color: '#10b981' },
+              ].map(s => (
+                <div key={s.label} style={{ ...kpiBox, borderLeft: `3px solid ${s.color}` }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.avg}</div>
+                  <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{s.label} — avg engagement</div>
+                  <div style={{ fontSize: 11, color: '#4b5563', marginTop: 2 }}>{s.count} hooks assigned</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {activeTab === 'weekly' && (
+        <div style={card}>
+          <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#e5e7eb' }}>Weekly Metrics</h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ color: '#6b7280' }}>
+                {['Week', 'Impressions', 'Comments', 'Clicks', 'Signups', 'Revenue', ''].map(h => (
+                  <th key={h} style={{ textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #2d3148' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {weeks.map(w => (
+                <tr key={w.week} style={{ borderBottom: '1px solid #1e2130' }}>
+                  {editingWeek === w.week ? (
+                    <>
+                      <td style={{ padding: '8px 10px', color: '#e5e7eb' }}>Wk {w.week}</td>
+                      {['impressions','comments','clicks','signups','revenue'].map(field => (
+                        <td key={field} style={{ padding: '4px 6px' }}>
+                          <input
+                            type="number"
+                            defaultValue={w[field]}
+                            onChange={e => setDraft(d => ({ ...d, [field]: Number(e.target.value) }))}
+                            style={{ width: 80, background: '#12151f', border: '1px solid #6366f1', borderRadius: 4, color: '#fff', padding: '4px 6px', fontSize: 12 }}
+                          />
+                        </td>
+                      ))}
+                      <td style={{ padding: '4px 6px' }}>
+                        <button onClick={() => saveWeek(w.week)} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}>Save</button>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={{ padding: '8px 10px', color: '#e5e7eb' }}>Wk {w.week}</td>
+                      <td style={{ padding: '8px 10px', color: '#9ca3af' }}>{w.impressions.toLocaleString()}</td>
+                      <td style={{ padding: '8px 10px', color: '#9ca3af' }}>{w.comments.toLocaleString()}</td>
+                      <td style={{ padding: '8px 10px', color: '#9ca3af' }}>{w.clicks.toLocaleString()}</td>
+                      <td style={{ padding: '8px 10px', color: '#f59e0b' }}>{w.signups}</td>
+                      <td style={{ padding: '8px 10px', color: '#10b981' }}>£{w.revenue.toLocaleString()}</td>
+                      <td style={{ padding: '8px 10px' }}>
+                        <button onClick={() => { setEditingWeek(w.week); setDraft({...w}) }} style={{ background: '#1e2130', color: '#6366f1', border: '1px solid #6366f1', borderRadius: 4, padding: '3px 10px', cursor: 'pointer', fontSize: 11 }}>Edit</button>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {activeTab === 'hooks' && (
+        <div style={card}>
+          <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#e5e7eb' }}>Hook Performance — All 100</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: '#6b7280' }}>
+                  {['Hook #', 'Structure', 'CTA', 'Impressions', 'Comments', 'Saves', 'Shares'].map(h => (
+                    <th key={h} style={{ textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #2d3148', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {hookData.map((h, idx) => (
+                  <tr key={h.id} style={{ borderBottom: '1px solid #1a1d27', background: idx % 2 === 0 ? 'transparent' : '#12151f' }}>
+                    <td style={{ padding: '7px 10px', color: '#e5e7eb' }}>#{h.id}</td>
+                    <td style={{ padding: '7px 10px' }}>
+                      <span style={{ background: h.structure === 'Story-First' ? '#312e81' : '#064e3b', color: h.structure === 'Story-First' ? '#818cf8' : '#34d399', borderRadius: 4, padding: '2px 7px', fontSize: 11 }}>{h.structure}</span>
+                    </td>
+                    <td style={{ padding: '7px 10px', color: '#f59e0b', fontSize: 11 }}>{h.cta}</td>
+                    {['impressions','comments','saves','shares'].map(field => (
+                      <td key={field} style={{ padding: '4px 6px' }}>
+                        <input
+                          type="number"
+                          value={hookData[idx][field]}
+                          onChange={e => setHookData(prev => prev.map((item, i) => i === idx ? { ...item, [field]: Number(e.target.value) } : item))}
+                          style={{ width: 70, background: '#12151f', border: '1px solid #2d3148', borderRadius: 4, color: '#9ca3af', padding: '3px 6px', fontSize: 11 }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'funnel' && (
+        <div style={card}>
+          <h3 style={{ margin: '0 0 20px', fontSize: 15, color: '#e5e7eb' }}>Funnel Conversion</h3>
+          {[
+            { label: 'Impressions → Comments', value: totals.impressions > 0 ? ((totals.comments / totals.impressions) * 100).toFixed(2) + '%' : '—', color: '#6366f1' },
+            { label: 'Comments → Clicks', value: totals.comments > 0 ? ((totals.clicks / totals.comments) * 100).toFixed(1) + '%' : '—', color: '#10b981' },
+            { label: 'Clicks → Signups', value: totals.clicks > 0 ? ((totals.signups / totals.clicks) * 100).toFixed(1) + '%' : '—', color: '#f59e0b' },
+            { label: 'Signups → Revenue', value: totals.signups > 0 ? '£' + (totals.revenue / Math.max(totals.signups, 1)).toFixed(0) + ' per signup' : '—', color: '#ec4899' },
+          ].map(row => (
+            <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid #1e2130' }}>
+              <span style={{ color: '#9ca3af', fontSize: 14 }}>{row.label}</span>
+              <span style={{ color: row.color, fontWeight: 700, fontSize: 22 }}>{row.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
