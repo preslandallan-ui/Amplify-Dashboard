@@ -13,7 +13,7 @@ export async function GET(request) {
     try {
       const userId = process.env.INSTAGRAM_USER_ID
       const token = process.env.INSTAGRAM_ACCESS_TOKEN
-      const fields = 'id,caption,media_type,timestamp,like_count,comments_count,impressions,reach,saved,shares'
+      const fields = 'id,caption,media_type,timestamp,like_count,comments_count'
       const url = `https://graph.facebook.com/v25.0/${userId}/media?fields=${fields}&access_token=${token}`
       const res = await fetch(url)
       const data = await res.json()
