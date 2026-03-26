@@ -1,15 +1,17 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+)
 
 const HOOKS = Array.from({ length: 100 }, (_, i) => ({
   id: i + 1,
   structure: i % 2 === 0 ? 'Story-First' : 'Stat-First',
   cta: i % 3 === 0 ? 'BOOK' : i % 3 === 1 ? 'INSIGHT' : 'COURSE',
 }))
-
-const initialWeekData = {
-  impressions: 0, comments: 0, clicks: 0, signups: 0, revenue: 0
-}
 
 const card = {
   background: '#1a1d27',
@@ -26,16 +28,76 @@ const kpiBox = {
   flex: 1,
 }
 
+const defaultWeeks = Array.from({ length: 10 }, (_, i) => ({
+  week: i + 1, impressions: 0, comments: 0, clicks: 0, signups: 0, revenue: 0
+}))
+
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview')
-  const [weeks, setWeeks] = useState(
-    Array.from({ length: 10 }, (_, i) => ({ week: i + 1, ...initialWeekData }))
-  )
+  const [weeks, setWeeks] = useState(defaultWeeks)
   const [hookData, setHookData] = useState(
     HOOKS.map(h => ({ ...h, impressions: 0, comments: 0, saves: 0, shares: 0 }))
   )
   const [editingWeek, setEditingWeek] = useState(null)
   const [draft, setDraft] = useState({})
+  const [saving, setSaving] = useState(false)
+  const [igPosts, setIgPosts] = useState([])
+  const [igLoading, setIgLoading] = useState(false)
+  const [igError, setIgError] = useState(null)
+
+  useEffect(() => {
+    async function loadWeeks() {
+      const { data, error } = await supabase
+        .from('dashboard_metrics')
+        .select('*')
+        .order('week', { ascending: true })
+      if (!error && data && data.length > 0) {
+        const merged = defaultWeeks.map(dw => {
+          const found = data.find(r => r.week === dw.week)
+          return found ? { week: dw.week, impressions: found.impressions, comments: found.comments, clicks: found.clicks, signups: found.signups, revenue: found.revenue } : dw
+        })
+        setWeeks(merged)
+      }
+    }
+    loadWeeks()
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'instagram') {
+      loadInstagram()
+    }
+  }, [activeTab])
+
+  async function loadInstagram() {
+    setIgLoading(true)
+    setIgError(null)
+    try {
+      const res = await fetch('/api/dashboard?type=instagram')
+      const json = await res.json()
+      if (json.success) {
+        setIgPosts(json.data)
+      } else {
+        setIgError(json.error || 'Failed to load Instagram data')
+      }
+    } catch (err) {
+      setIgError(err.message)
+    }
+    setIgLoading(false)
+  }
+
+  const saveWeek = async (weekNum) => {
+    setSaving(true)
+    const updated = { ...weeks.find(w => w.week === weekNum), ...draft }
+    const { error } = await supabase
+      .from('dashboard_metrics')
+      .upsert({ week: weekNum, ...draft }, { onConflict: 'week' })
+    if (!error) {
+      setWeeks(prev => prev.map(w => w.week === weekNum ? updated : w))
+    }
+    setEditingWeek(null)
+    setDraft({})
+    setSaving(false)
+  }
 
   const totals = weeks.reduce((acc, w) => ({
     impressions: acc.impressions + w.impressions,
@@ -55,13 +117,15 @@ export default function Dashboard() {
     return arr.length ? (total / arr.length).toFixed(1) : 0
   }
 
-  const saveWeek = (weekNum) => {
-    setWeeks(prev => prev.map(w => w.week === weekNum ? { ...w, ...draft } : w))
-    setEditingWeek(null)
-    setDraft({})
-  }
+  const igTotals = igPosts.reduce((acc, p) => ({
+    impressions: acc.impressions + (p.impressions || 0),
+    reach: acc.reach + (p.reach || 0),
+    likes: acc.likes + (p.like_count || 0),
+    comments: acc.comments + (p.comments_count || 0),
+    saves: acc.saves + (p.saved || 0),
+  }), { impressions: 0, reach: 0, likes: 0, comments: 0, saves: 0 })
 
-  const tabs = ['overview', 'weekly', 'hooks', 'funnel']
+  const tabs = ['overview', 'instagram', 'weekly', 'hooks', 'funnel']
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
@@ -70,7 +134,7 @@ export default function Dashboard() {
         <p style={{ color: '#6b7280', fontSize: 14, margin: '4px 0 0' }}>EYbi Campaign · Amplify Training FZE</p>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
         {tabs.map(t => (
           <button key={t} onClick={() => setActiveTab(t)} style={{
             padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer',
@@ -81,6 +145,7 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* OVERVIEW TAB */}
       {activeTab === 'overview' && (
         <>
           <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -137,6 +202,82 @@ export default function Dashboard() {
         </>
       )}
 
+      {/* INSTAGRAM TAB */}
+      {activeTab === 'instagram' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2 style={{ margin: 0, fontSize: 16, color: '#e5e7eb' }}>@allanpresland — Instagram</h2>
+            <button onClick={loadInstagram} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 12 }}>
+              Refresh
+            </button>
+          </div>
+
+          {igLoading && <div style={{ color: '#6b7280', padding: '40px 0', textAlign: 'center' }}>Loading Instagram data...</div>}
+          {igError && <div style={{ color: '#ef4444', padding: '20px', background: '#1a1d27', borderRadius: 8, marginBottom: 16 }}>Error: {igError}</div>}
+
+          {!igLoading && !igError && igPosts.length > 0 && (
+            <>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+                {[
+                  { label: 'Total Impressions', value: igTotals.impressions.toLocaleString(), color: '#6366f1' },
+                  { label: 'Total Reach', value: igTotals.reach.toLocaleString(), color: '#10b981' },
+                  { label: 'Total Likes', value: igTotals.likes.toLocaleString(), color: '#f59e0b' },
+                  { label: 'Total Comments', value: igTotals.comments.toLocaleString(), color: '#ec4899' },
+                  { label: 'Total Saves', value: igTotals.saves.toLocaleString(), color: '#8b5cf6' },
+                ].map(k => (
+                  <div key={k.label} style={{ ...kpiBox, minWidth: 120 }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: k.color }}>{k.value}</div>
+                    <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>{k.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={card}>
+                <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#e5e7eb' }}>Posts — ranked by impressions</h3>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                    <thead>
+                      <tr style={{ color: '#6b7280' }}>
+                        {['Date', 'Caption', 'Type', 'Impressions', 'Reach', 'Likes', 'Comments', 'Saves'].map(h => (
+                          <th key={h} style={{ textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #2d3148', whiteSpace: 'nowrap' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...igPosts].sort((a, b) => (b.impressions || 0) - (a.impressions || 0)).map((p, idx) => (
+                        <tr key={p.id} style={{ borderBottom: '1px solid #1a1d27', background: idx % 2 === 0 ? 'transparent' : '#12151f' }}>
+                          <td style={{ padding: '7px 10px', color: '#9ca3af', whiteSpace: 'nowrap' }}>
+                            {new Date(p.timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          </td>
+                          <td style={{ padding: '7px 10px', color: '#e5e7eb', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {p.caption ? p.caption.substring(0, 60) + (p.caption.length > 60 ? '...' : '') : '—'}
+                          </td>
+                          <td style={{ padding: '7px 10px' }}>
+                            <span style={{ background: p.media_type === 'CAROUSEL_ALBUM' ? '#312e81' : '#064e3b', color: p.media_type === 'CAROUSEL_ALBUM' ? '#818cf8' : '#34d399', borderRadius: 4, padding: '2px 6px', fontSize: 10 }}>
+                              {p.media_type === 'CAROUSEL_ALBUM' ? 'Carousel' : p.media_type === 'VIDEO' ? 'Reel' : 'Image'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '7px 10px', color: '#6366f1', fontWeight: 600 }}>{(p.impressions || 0).toLocaleString()}</td>
+                          <td style={{ padding: '7px 10px', color: '#9ca3af' }}>{(p.reach || 0).toLocaleString()}</td>
+                          <td style={{ padding: '7px 10px', color: '#f59e0b' }}>{(p.like_count || 0).toLocaleString()}</td>
+                          <td style={{ padding: '7px 10px', color: '#ec4899' }}>{(p.comments_count || 0).toLocaleString()}</td>
+                          <td style={{ padding: '7px 10px', color: '#8b5cf6' }}>{(p.saved || 0).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {!igLoading && !igError && igPosts.length === 0 && (
+            <div style={{ color: '#6b7280', padding: '40px 0', textAlign: 'center' }}>No posts found. Click Refresh to load.</div>
+          )}
+        </>
+      )}
+
+      {/* WEEKLY TAB */}
       {activeTab === 'weekly' && (
         <div style={card}>
           <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#e5e7eb' }}>Weekly Metrics</h3>
@@ -165,7 +306,9 @@ export default function Dashboard() {
                         </td>
                       ))}
                       <td style={{ padding: '4px 6px' }}>
-                        <button onClick={() => saveWeek(w.week)} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}>Save</button>
+                        <button onClick={() => saveWeek(w.week)} disabled={saving} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}>
+                          {saving ? '...' : 'Save'}
+                        </button>
                       </td>
                     </>
                   ) : (
@@ -188,6 +331,7 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* HOOKS TAB */}
       {activeTab === 'hooks' && (
         <div style={card}>
           <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#e5e7eb' }}>Hook Performance — All 100</h3>
@@ -226,6 +370,7 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* FUNNEL TAB */}
       {activeTab === 'funnel' && (
         <div style={card}>
           <h3 style={{ margin: '0 0 20px', fontSize: 15, color: '#e5e7eb' }}>Funnel Conversion</h3>
