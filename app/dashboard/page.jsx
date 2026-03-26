@@ -44,6 +44,7 @@ export default function Dashboard() {
   const [igPosts, setIgPosts] = useState([])
   const [igLoading, setIgLoading] = useState(false)
   const [igError, setIgError] = useState(null)
+  const [expandedPost, setExpandedPost] = useState(null)
 
   useEffect(() => {
     async function loadWeeks() {
@@ -233,36 +234,63 @@ export default function Dashboard() {
               </div>
 
               <div style={card}>
-                <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#e5e7eb' }}>Posts — ranked by impressions</h3>
+                <h3 style={{ margin: '0 0 4px', fontSize: 15, color: '#e5e7eb' }}>Posts — ranked by date</h3>
+                <p style={{ margin: '0 0 16px', fontSize: 11, color: '#4b5563' }}>Impressions, Reach &amp; Saves require <em>instagram_manage_insights</em> — pending Meta App Review</p>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                     <thead>
                       <tr style={{ color: '#6b7280' }}>
-                        {['Date', 'Caption', 'Type', 'Impressions', 'Reach', 'Likes', 'Comments', 'Saves'].map(h => (
+                        {['Date', 'Caption', 'Type', 'Impressions', 'Reach', 'Likes', 'Comments', 'Saves', ''].map(h => (
                           <th key={h} style={{ textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #2d3148', whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {[...igPosts].sort((a, b) => (b.impressions || 0) - (a.impressions || 0)).map((p, idx) => (
-                        <tr key={p.id} style={{ borderBottom: '1px solid #1a1d27', background: idx % 2 === 0 ? 'transparent' : '#12151f' }}>
-                          <td style={{ padding: '7px 10px', color: '#9ca3af', whiteSpace: 'nowrap' }}>
-                            {new Date(p.timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                          </td>
-                          <td style={{ padding: '7px 10px', color: '#e5e7eb', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {p.caption ? p.caption.substring(0, 60) + (p.caption.length > 60 ? '...' : '') : '—'}
-                          </td>
-                          <td style={{ padding: '7px 10px' }}>
-                            <span style={{ background: p.media_type === 'CAROUSEL_ALBUM' ? '#312e81' : '#064e3b', color: p.media_type === 'CAROUSEL_ALBUM' ? '#818cf8' : '#34d399', borderRadius: 4, padding: '2px 6px', fontSize: 10 }}>
-                              {p.media_type === 'CAROUSEL_ALBUM' ? 'Carousel' : p.media_type === 'VIDEO' ? 'Reel' : 'Image'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '7px 10px', color: '#6366f1', fontWeight: 600 }}>{(p.impressions || 0).toLocaleString()}</td>
-                          <td style={{ padding: '7px 10px', color: '#9ca3af' }}>{(p.reach || 0).toLocaleString()}</td>
-                          <td style={{ padding: '7px 10px', color: '#f59e0b' }}>{(p.like_count || 0).toLocaleString()}</td>
-                          <td style={{ padding: '7px 10px', color: '#ec4899' }}>{(p.comments_count || 0).toLocaleString()}</td>
-                          <td style={{ padding: '7px 10px', color: '#8b5cf6' }}>{(p.saved || 0).toLocaleString()}</td>
-                        </tr>
+                      {[...igPosts].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).map((p, idx) => (
+                        <>
+                          <tr key={p.id} style={{ borderBottom: expandedPost === p.id ? 'none' : '1px solid #1a1d27', background: idx % 2 === 0 ? 'transparent' : '#12151f' }}>
+                            <td style={{ padding: '7px 10px', color: '#9ca3af', whiteSpace: 'nowrap' }}>
+                              {new Date(p.timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                            </td>
+                            <td style={{ padding: '7px 10px', color: '#e5e7eb', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {p.caption ? p.caption.substring(0, 60) + (p.caption.length > 60 ? '...' : '') : '—'}
+                            </td>
+                            <td style={{ padding: '7px 10px' }}>
+                              <span style={{ background: p.media_type === 'CAROUSEL_ALBUM' ? '#312e81' : '#064e3b', color: p.media_type === 'CAROUSEL_ALBUM' ? '#818cf8' : '#34d399', borderRadius: 4, padding: '2px 6px', fontSize: 10 }}>
+                                {p.media_type === 'CAROUSEL_ALBUM' ? 'Carousel' : p.media_type === 'VIDEO' ? 'Reel' : 'Image'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '7px 10px', color: '#4b5563', fontSize: 11 }}>—</td>
+                            <td style={{ padding: '7px 10px', color: '#4b5563', fontSize: 11 }}>—</td>
+                            <td style={{ padding: '7px 10px', color: '#f59e0b' }}>{(p.like_count || 0).toLocaleString()}</td>
+                            <td style={{ padding: '7px 10px', color: '#ec4899' }}>{(p.comments_count || 0).toLocaleString()}</td>
+                            <td style={{ padding: '7px 10px', color: '#4b5563', fontSize: 11 }}>—</td>
+                            <td style={{ padding: '7px 10px' }}>
+                              {p.comments_count > 0 && (
+                                <button
+                                  onClick={() => setExpandedPost(expandedPost === p.id ? null : p.id)}
+                                  style={{ background: 'transparent', color: '#6366f1', border: '1px solid #6366f1', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 10 }}
+                                >
+                                  {expandedPost === p.id ? 'Hide' : 'Comments'}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                          {expandedPost === p.id && p.comments && p.comments.length > 0 && (
+                            <tr key={p.id + '_comments'} style={{ background: '#0e1018', borderBottom: '1px solid #1a1d27' }}>
+                              <td colSpan={9} style={{ padding: '10px 16px' }}>
+                                <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>Comments on this post:</div>
+                                {p.comments.map(c => (
+                                  <div key={c.id} style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'flex-start' }}>
+                                    <span style={{ color: '#6366f1', fontWeight: 600, minWidth: 100, fontSize: 11 }}>@{c.username || 'user'}</span>
+                                    <span style={{ color: '#d1d5db', fontSize: 12, flex: 1 }}>{c.text}</span>
+                                    <span style={{ color: '#4b5563', fontSize: 10, whiteSpace: 'nowrap' }}>{new Date(c.timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                                  </div>
+                                ))}
+                              </td>
+                            </tr>
+                          )}
+                        </>
                       ))}
                     </tbody>
                   </table>
