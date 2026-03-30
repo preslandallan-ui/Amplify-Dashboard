@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import PublishTab from './components/PublishTab'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -91,7 +92,7 @@ export default function Dashboard() {
     return arr.length ? (total / arr.length).toFixed(1) : 0
   }
 
-  const tabs = ['overview', 'weekly', 'hooks', 'funnel']
+  const tabs = ['overview', 'weekly', 'hooks', 'funnel', 'publish']
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
@@ -169,81 +170,4 @@ export default function Dashboard() {
 
       {activeTab === 'weekly' && (
         <div style={card}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#e5e7eb' }}>Weekly Metrics</h3>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ color: '#6b7280' }}>
-                {['Week', 'Impressions', 'Comments', 'Clicks', 'Signups', 'Revenue', ''].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #2d3148' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {weeks.map(w => (
-                <tr key={w.week} style={{ borderBottom: '1px solid #1e2130' }}>
-                  {editingWeek === w.week ? (
-                    <>
-                      <td style={{ padding: '8px 10px', color: '#e5e7eb' }}>Wk {w.week}</td>
-                      {['impressions','comments','clicks','signups','revenue'].map(field => (
-                        <td key={field} style={{ padding: '4px 6px' }}>
-                          <input
-                            type="number"
-                            defaultValue={w[field]}
-                            onChange={e => setDraft(d => ({ ...d, [field]: Number(e.target.value) }))}
-                            style={{ width: 80, background: '#12151f', border: '1px solid #6366f1', borderRadius: 4, color: '#fff', padding: '4px 6px', fontSize: 12 }}
-                          />
-                        </td>
-                      ))}
-                      <td style={{ padding: '4px 6px' }}>
-                        <button onClick={() => saveWeek(w.week)} disabled={saving} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}>
-                          {saving ? '...' : 'Save'}
-                        </button>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td style={{ padding: '8px 10px', color: '#e5e7eb' }}>Wk {w.week}</td>
-                      <td style={{ padding: '8px 10px', color: '#9ca3af' }}>{w.impressions.toLocaleString()}</td>
-                      <td style={{ padding: '8px 10px', color: '#9ca3af' }}>{w.comments.toLocaleString()}</td>
-                      <td style={{ padding: '8px 10px', color: '#9ca3af' }}>{w.clicks.toLocaleString()}</td>
-                      <td style={{ padding: '8px 10px', color: '#f59e0b' }}>{w.signups}</td>
-                      <td style={{ padding: '8px 10px', color: '#10b981' }}>£{w.revenue.toLocaleString()}</td>
-                      <td style={{ padding: '8px 10px' }}>
-                        <button onClick={() => { setEditingWeek(w.week); setDraft({...w}) }} style={{ background: '#1e2130', color: '#6366f1', border: '1px solid #6366f1', borderRadius: 4, padding: '3px 10px', cursor: 'pointer', fontSize: 11 }}>Edit</button>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {activeTab === 'hooks' && (
-        <div style={card}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#e5e7eb' }}>Hook Performance — All 100</h3>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ color: '#6b7280' }}>
-                  {['Hook #', 'Structure', 'CTA', 'Impressions', 'Comments', 'Saves', 'Shares'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #2d3148', whiteSpace: 'nowrap' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {hookData.map((h, idx) => (
-                  <tr key={h.id} style={{ borderBottom: '1px solid #1a1d27', background: idx % 2 === 0 ? 'transparent' : '#12151f' }}>
-                    <td style={{ padding: '7px 10px', color: '#e5e7eb' }}>#{h.id}</td>
-                    <td style={{ padding: '7px 10px' }}>
-                      <span style={{ background: h.structure === 'Story-First' ? '#312e81' : '#064e3b', color: h.structure === 'Story-First' ? '#818cf8' : '#34d399', borderRadius: 4, padding: '2px 7px', fontSize: 11 }}>{h.structure}</span>
-                    </td>
-                    <td style={{ padding: '7px 10px', color: '#f59e0b', fontSize: 11 }}>{h.cta}</td>
-                    {['impressions','comments','saves','shares'].map(field => (
-                      <td key={field} style={{ padding: '4px 6px' }}>
-                        <input
-                          type="number"
-                          value={hookData[idx][field]}
-                          onChange={e => setHookData(prev => prev.map((item, i) => i === idx ? { ...item, [field]: Number(e.target.value) } : item))}
-                          style={{ width: 70, background: '#12151f', border: '1px solid
+          <h3
