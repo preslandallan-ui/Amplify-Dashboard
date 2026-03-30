@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import PublishTab from '../components/PublishTab'
+import TrafficTab from '../components/TrafficTab'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -107,7 +108,7 @@ export default function Dashboard() {
     { label: 'Conversions', sublabel: 'Purchases or EYbi signups', value: ctaTotals.conversions, color: '#f59e0b', dropPct: pct(ctaTotals.conversions, ctaTotals.clicks) },
     { label: 'Revenue', sublabel: 'Total from funnel', value: `£${(ctaTotals.revenue || totals.revenue).toLocaleString()}`, color: '#ec4899', dropPct: ctaTotals.conversions > 0 ? `£${((ctaTotals.revenue || totals.revenue) / ctaTotals.conversions).toFixed(0)} per conversion` : '—' },
   ]
-  const tabs = ['overview', 'instagram', 'weekly', 'hooks', 'funnel', 'publish']
+  const tabs = ['overview', 'instagram', 'weekly', 'hooks', 'funnel', 'traffic', 'publish']
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
@@ -338,6 +339,8 @@ export default function Dashboard() {
           </div>
         </>
       )}
+
+      {activeTab === 'traffic' && <TrafficTab />}
 
       {activeTab === 'publish' && (
         <div style={card}>
