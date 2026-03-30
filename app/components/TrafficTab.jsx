@@ -643,18 +643,18 @@ export default function TrafficTab() {
         <div style={{ fontSize: 12, color: '#6b7280', fontWeight: 700, marginBottom: 8, letterSpacing: 1 }}>GA4 INFRASTRUCTURE STATUS</div>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {[
-            { site: 'EYbi', status: 'unconfirmed', note: 'G-XSDC05FB8V — verify in GA4 console' },
-            { site: 'Book site', status: 'not installed', note: 'childcare-superhero.co/.com' },
-            { site: 'Course site', status: 'not installed', note: 'childcare-superhero.co.uk/resources' },
-            { site: 'Blueprint', status: 'not installed', note: 'childcare-business-blueprint.co.uk' },
+            { site: 'EYbi', status: 'live', note: 'G-XSDC05FB8V - confirmed tracking' },
+            { site: 'Book site', status: 'live', note: 'G-DVE827YSEC - confirmed tracking' },
+            { site: 'Course site', status: 'live', note: 'G-DVE827YSEC - same property as book' },
+            { site: 'Blueprint', status: 'installed', note: 'G-Y300MN32EM - publish to activate' },
           ].map(item => (
             <div key={item.site} style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 200 }}>
               <span style={{
                 fontSize: 9, fontWeight: 700, borderRadius: 4, padding: '2px 6px',
-                background: item.status === 'unconfirmed' ? '#422006' : '#1a0a0a',
-                color: item.status === 'unconfirmed' ? '#f97316' : '#ef4444',
+                background: item.status === 'live' ? '#052e16' : item.status === 'installed' ? '#422006' : '#1a0a0a',
+                color: item.status === 'live' ? '#22c55e' : item.status === 'installed' ? '#f97316' : '#ef4444',
               }}>
-                {item.status.toUpperCase()}
+                {item.status === 'live' ? '● LIVE' : item.status.toUpperCase()}
               </span>
               <div>
                 <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 600 }}>{item.site}</div>
