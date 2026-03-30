@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import PublishTab from '../components/PublishTab'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -106,7 +107,7 @@ export default function Dashboard() {
     { label: 'Conversions', sublabel: 'Purchases or EYbi signups', value: ctaTotals.conversions, color: '#f59e0b', dropPct: pct(ctaTotals.conversions, ctaTotals.clicks) },
     { label: 'Revenue', sublabel: 'Total from funnel', value: `£${(ctaTotals.revenue || totals.revenue).toLocaleString()}`, color: '#ec4899', dropPct: ctaTotals.conversions > 0 ? `£${((ctaTotals.revenue || totals.revenue) / ctaTotals.conversions).toFixed(0)} per conversion` : '—' },
   ]
-  const tabs = ['overview', 'instagram', 'weekly', 'hooks', 'funnel']
+  const tabs = ['overview', 'instagram', 'weekly', 'hooks', 'funnel', 'publish']
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
@@ -336,6 +337,13 @@ export default function Dashboard() {
             )}
           </div>
         </>
+      )}
+
+      {activeTab === 'publish' && (
+        <div style={card}>
+          <h3 style={{ margin: '0 0 16px', fontSize: 15, color: '#e5e7eb' }}>Publish to Instagram</h3>
+          <PublishTab />
+        </div>
       )}
     </div>
   )
