@@ -1,5 +1,11 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+)
 
 const SITES = [
   { id: 'eybi', label: 'EYbi', domain: 'eybi.co.uk', color: '#6366f1', conversions: ['Free Sign-up', 'Paid Upgrade'] },
@@ -288,8 +294,7 @@ function SourceBreakdown({ site, trafficData }) {
 }
 
 // Manual data entry panel
-function ManualEntryPanel({ siteData, setSiteData, trafficData, setTrafficData, activeSite }) {
-  const site = SITES.find(s => s.id === activeSite)
+function ManualEntryPanel({ site, siteData, setSiteData, trafficData, setTrafficData, activeSite, dateRange }) {
   if (!site) return null
   const [localSessions, setLocalSessions] = useState({})
   const [localConversions, setLocalConversions] = useState({})
@@ -310,21 +315,41 @@ function ManualEntryPanel({ siteData, setSiteData, trafficData, setTrafficData, 
 
   const handleSave = async () => {
     setSaving(true)
-    const newTrafficData = { ...trafficData }
-    SOURCES.forEach(src => {
-      if (!newTrafficData[src.id]) newTrafficData[src.id] = {}
-      newTrafficData[src.id][activeSite] = {
+    try {
+      // Upsert sessions rows
+      const sessionRows = SOURCES.map(src => ({
+        site_id: activeSite,
+        source_id: src.id,
         sessions: Number(localSessions[src.id] || 0),
-        conversions: 0,
+        date_range: dateRange,
+        updated_at: new Date().toISOString(),
+      }))
+      await supabase.from('traffic_sessions').upsert(sessionRows, { onConflict: 'site_id,source_id,date_range' })
+
+      // Upsert conversion rows
+      const convRows = site.conversions.map(conv => ({
+        site_id: activeSite,
+        conversion_type: conv,
+        count: Number(localConversions[conv] || 0),
+        date_range: dateRange,
+        updated_at: new Date().toISOString(),
+      }))
+      await supabase.from('traffic_conversions').upsert(convRows, { onConflict: 'site_id,conversion_type,date_range' })
+
+      // Update local state
+      const newTrafficData = { ...trafficData }
+      SOURCES.forEach(src => {
+        if (!newTrafficData[src.id]) newTrafficData[src.id] = {}
+        newTrafficData[src.id][activeSite] = { sessions: Number(localSessions[src.id] || 0), conversions: 0 }
+      })
+      setTrafficData(newTrafficData)
+      const newSiteData = { ...siteData }
+      newSiteData[activeSite] = {
+        ...newSiteData[activeSite],
+        conversions: Object.fromEntries(site.conversions.map(c => [c, Number(localConversions[c] || 0)])),
       }
-    })
-    setTrafficData(newTrafficData)
-    const newSiteData = { ...siteData }
-    newSiteData[activeSite] = {
-      ...newSiteData[activeSite],
-      conversions: Object.fromEntries(site.conversions.map(c => [c, Number(localConversions[c] || 0)])),
-    }
-    setSiteData(newSiteData)
+      setSiteData(newSiteData)
+    } catch (e) { console.error('Save error:', e) }
     setSaving(false)
   }
 
@@ -438,6 +463,40 @@ export default function TrafficTab() {
   const [showEntry, setShowEntry] = useState(false)
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  // Load persisted data from Supabase on mount and when date range changes
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true)
+      try {
+        const [sessionsRes, conversionsRes] = await Promise.all([
+          supabase.from('traffic_sessions').select('*').eq('date_range', dateRange),
+          supabase.from('traffic_conversions').select('*').eq('date_range', dateRange),
+        ])
+        if (!sessionsRes.error && sessionsRes.data?.length > 0) {
+          const newTrafficData = emptyTrafficData()
+          sessionsRes.data.forEach(row => {
+            if (newTrafficData[row.source_id] && newTrafficData[row.source_id][row.site_id] !== undefined) {
+              newTrafficData[row.source_id][row.site_id].sessions = row.sessions
+            }
+          })
+          setTrafficData(newTrafficData)
+        }
+        if (!conversionsRes.error && conversionsRes.data?.length > 0) {
+          const newSiteData = emptySiteData()
+          conversionsRes.data.forEach(row => {
+            if (newSiteData[row.site_id]) {
+              newSiteData[row.site_id].conversions[row.conversion_type] = row.count
+            }
+          })
+          setSiteData(newSiteData)
+        }
+      } catch (e) { console.error('Traffic load error:', e) }
+      setLoading(false)
+    }
+    loadData()
+  }, [dateRange])
 
   const handleSiteClick = (siteId) => {
     setSelectedSite(siteId)
@@ -567,11 +626,13 @@ export default function TrafficTab() {
           <SourceBreakdown site={expandedSiteObj} trafficData={trafficData} />
           {showEntry && (
             <ManualEntryPanel
+              site={expandedSiteObj}
               siteData={siteData}
               setSiteData={setSiteData}
               trafficData={trafficData}
               setTrafficData={setTrafficData}
               activeSite={expandedSite}
+              dateRange={dateRange}
             />
           )}
         </div>
