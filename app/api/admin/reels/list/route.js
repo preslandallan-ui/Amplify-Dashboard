@@ -40,6 +40,7 @@ export async function GET() {
       else if (pub?.status === 'failed') status = 'failed'
       else if (gen?.status === 'uploaded') status = 'video ready'
 
+      const hasUploadedVideo = gen?.status === 'uploaded'
       return {
         day: s.day,
         title: s.title,
@@ -51,8 +52,8 @@ export async function GET() {
         voiceover_text: s.voiceover_text,
         seedance_prompt: s.seedance_prompt,
         status,
-        storage_path: gen?.storage_path || null,
-        video_url: gen?.storage_path ? `${STORAGE_BASE}/${gen.storage_path}` : null,
+        storage_path: hasUploadedVideo ? gen.storage_path : null,
+        video_url: hasUploadedVideo && gen.storage_path ? `${STORAGE_BASE}/${gen.storage_path}` : null,
         post_id: pub?.post_id || null,
         published_at: pub?.published_at || null,
         publish_error: pub?.error || null,
