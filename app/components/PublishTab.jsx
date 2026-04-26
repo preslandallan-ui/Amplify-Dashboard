@@ -24,12 +24,54 @@ function formatTime(iso) {
   return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
+function CopyButton({ text, label = 'Copy' }) {
+  const [copied, setCopied] = useState(false);
+  if (!text) return null;
+  return (
+    <button
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch (e) {
+          // fallback
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        }
+      }}
+      className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-xs font-medium"
+    >
+      {copied ? '✓ Copied' : `📋 ${label}`}
+    </button>
+  );
+}
+
+function Field({ label, text, copyable }) {
+  if (!text) return null;
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <div className="text-xs uppercase text-gray-500 tracking-wide">{label}</div>
+        {copyable && <CopyButton text={text} />}
+      </div>
+      <pre className="text-xs text-gray-300 whitespace-pre-wrap font-sans bg-gray-900/40 border border-gray-800 rounded p-3 max-h-72 overflow-y-auto">{text}</pre>
+    </div>
+  );
+}
+
 export default function PublishTab() {
   const [rows, setRows] = useState([]);
   const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [shipping, setShipping] = useState(null); // day being shipped
+  const [shipping, setShipping] = useState(null);
   const [shipResult, setShipResult] = useState(null);
   const [expandedRow, setExpandedRow] = useState(null);
 
@@ -47,11 +89,8 @@ export default function PublishTab() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
-  // Auto-poll while any row is processing
   useEffect(() => {
     const hasProcessing = rows.some((r) => r.status === 'processing') || shipping;
     if (!hasProcessing) return;
@@ -86,7 +125,7 @@ export default function PublishTab() {
       <div>
         <h2 className="text-xl font-semibold text-white mb-1">Reels Pipeline</h2>
         <p className="text-sm text-gray-400">
-          Scripts pulled from <code className="text-gray-300">reel_scripts</code>. Days 1–70 are scheduled content; 100+ are specials. Upload videos to <code className="text-gray-300">reels/day-N/REEL-N.mp4</code> via Supabase Storage, then click Ship.
+          Click a row to see the script, Seedance prompt, and (once uploaded) video preview. Days 1–70 are scheduled content; 100+ are specials. Upload videos to <code className="text-gray-300">reels/day-N/REEL-N.mp4</code> via Supabase Storage, then click Ship.
         </p>
       </div>
 
@@ -115,7 +154,7 @@ export default function PublishTab() {
                       onClick={() => setExpandedRow(expandedRow === r.day ? null : r.day)}
                       className="text-left hover:underline"
                     >
-                      {r.title}
+                      {expandedRow === r.day ? '▾ ' : '▸ '}{r.title}
                     </button>
                   </td>
                   <td className="px-4 py-3">
@@ -153,21 +192,38 @@ export default function PublishTab() {
                 </tr>
                 {expandedRow === r.day && (
                   <tr className="bg-gray-900/50">
-                    <td colSpan={6} className="px-4 py-4">
-                      <div className="space-y-3">
-                        <div>
-                          <div className="text-xs uppercase text-gray-500 mb-1">Hook (caption body)</div>
-                          <pre className="text-xs text-gray-300 whitespace-pre-wrap font-sans">{r.hook}</pre>
-                        </div>
-                        <div>
-                          <div className="text-xs uppercase text-gray-500 mb-1">CTA</div>
-                          <pre className="text-xs text-gray-300 whitespace-pre-wrap font-sans">{r.cta}</pre>
-                        </div>
-                        {r.storage_path && (
-                          <div className="text-xs text-gray-500">
-                            <span className="uppercase">Video:</span> <code>{r.storage_path}</code>
+                    <td colSpan={6} className="px-4 py-5">
+                      <div className="space-y-4">
+                        {r.video_url && (
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="text-xs uppercase text-gray-500 tracking-wide">Video — review before shipping</div>
+                              <a
+                                href={r.video_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-xs font-medium"
+                              >
+                                ↗ Open in new tab
+                              </a>
+                            </div>
+                            <video
+                              src={r.video_url}
+                              controls
+                              preload="metadata"
+                              className="rounded border border-gray-700 max-h-[480px] bg-black"
+                              style={{ aspectRatio: '9/16', width: 'auto' }}
+                            />
+                            <div className="text-xs text-gray-500 mt-1 font-mono">{r.storage_path}</div>
                           </div>
                         )}
+
+                        <Field label="Hook (IG caption)" text={r.hook} copyable />
+                        <Field label="CTA" text={r.cta} copyable />
+                        <Field label="Voice-over text" text={r.voiceover_text} copyable />
+                        <Field label="Body / scene notes" text={r.body} copyable />
+                        <Field label="🎬 Seedance prompt — paste this into Higgsfield" text={r.seedance_prompt} copyable />
+
                         {r.publish_error && (
                           <div className="text-xs text-red-400">
                             <span className="uppercase">Last error:</span> {r.publish_error}
