@@ -7,11 +7,13 @@ const supabase = createClient(
 
 export const dynamic = 'force-dynamic'
 
+const STORAGE_BASE = 'https://fexqxblelamfyfcldtzs.supabase.co/storage/v1/object/public/reels'
+
 export async function GET() {
   try {
     const { data: scripts, error: sErr } = await supabase
       .from('reel_scripts')
-      .select('day, title, trigger, production_type, hook, body, cta, updated_at')
+      .select('day, title, trigger, production_type, hook, body, cta, voiceover_text, seedance_prompt, updated_at')
       .order('day', { ascending: true })
     if (sErr) throw sErr
 
@@ -44,9 +46,13 @@ export async function GET() {
         trigger: s.trigger,
         production_type: s.production_type,
         hook: s.hook,
+        body: s.body,
         cta: s.cta,
+        voiceover_text: s.voiceover_text,
+        seedance_prompt: s.seedance_prompt,
         status,
         storage_path: gen?.storage_path || null,
+        video_url: gen?.storage_path ? `${STORAGE_BASE}/${gen.storage_path}` : null,
         post_id: pub?.post_id || null,
         published_at: pub?.published_at || null,
         publish_error: pub?.error || null,
